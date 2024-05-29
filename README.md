@@ -52,7 +52,7 @@ We recommend you use the following directory structure and for the built in func
 
 > NOTE: we recommend disabling WandB as otherwise it may attempt to link artifacts from runs that don't exist.
 
->📋  Describe how to train the models, with example commands on how to train the models in your paper, including the full training procedure and appropriate hyperparameters.
+TBD
 
 ## Evaluation
 
@@ -70,9 +70,6 @@ Note that you must manually zip and submit the GLUE results to the test server t
 All pretrained models can be downloaded from Hugging Face [here](https://huggingface.co/collections/Avelina/direct-preference-heads-preprint-6612d8a6fa3843352943fd43) and must be saved in the `/checkpoints/` directory to load correctly.
 
 Note that when using `LSWTForDPH.generate(...)` the generation will stop when an `<|im_end|>` is predicted, however this token is NOT automatically added to the input context: there must be a manually added `<|im_end|>` token included at the end of the final assistant message for the `LSWTForDPH.compute_rewards(...)` method to calculate the reward correctly. If this token is not included the method will end up computing the reward for the final *user* message rather than the final *assistant* message which is undefined behaviour. 
-
-
->📋  Give a link to where/how the pretrained models can be downloaded and how they were trained (if applicable).  Alternatively you can have an additional column in your results table with a link to the models.
 
 ## Results
 
