@@ -1,38 +1,22 @@
-# Long-Short-Working Transformer
+# Would I Lie To You? Inference Time Alignment of Language Models using Direct Preference Heads
 
-[![linting: pylint](https://img.shields.io/badge/linting-pylint-yellowgreen)](https://github.com/pylint-dev/pylint)
+This repository is the official implementation of "Would I Lie To You? Inference Time Alignment of Language Models using Direct Preference Heads"
 
-A public repo for the LSWTransformer, codename `memory-transformer-pt4`.
+## Requirements
 
-## Features
-- **Transformer-XL style cache** for long sequence modelling.
-- **Reversed RoPE** for better EOS stability and an adjusted base frequency to help extrapolate to longer sequences.
-- ~~**Attention Registers** to provide sinks for unwanted attention.~~ Included, but no longer used.
-- **Flash Attention** for IO aware accelerated attention.
-- **SwiGLU Activation** in the FFN layers for higher model capacity.
-- **HuggingFace Model Format** for integration with the 🤗 ecosystem.
-- **Warmstart Word Embeddings** taken from `facebook/opt-125m` to accelerate convergence.
-- **Input/Output Projections** to decouple embedding matrix dimension from model dimension.
-- ~~**SimCTG Loss (optional)** to encourage embedding diversity.~~ Included, but no longer used.
-- **LaProp Optimizer** for faster convergence.
-- ~~**QK RMSNorm** grouped per head, suggested in multiple works to improve performance.~~ Added, but hasn't improved performance.
-- **KV Recompute** during training for additional memory gradients. Can be disabled in config and is disabled when in eval mode.
-- **Direct Preference Heads** for alignment without degredation.
+We recommend using the `nvcr.io/nvidia/pytorch:24.01-py3` docker container and installing all dependencies from `requirements.txt`.
 
-### Planned Features
-- **Partial RoPE** applying positional information to only a fraction of each head, suggested in GPT-Neo and GPT-J to improve performance.
-- **Long Term Memory** as an additional `past_key_values` argument.
-- **Segment Embeddings** utilising whitening to facilitate segment retrieval into long term memory.
-- **Spectral Normalisation** of QK projections using the 'Spectra' post-optimizer.
+An example dockerfile is included below:
 
-## Training and Evaluation Data
-LSWT is currently being trained on the original distribution of The Pile dataset. Runs without DDP use all 30 shards (0-29 inclusive), while runs using DDP are trained using the first 24 shards (0-23 inclusive) for easier distribution of data for typical world sizes.
+```docker
+FROM nvcr.io/nvidia/pytorch:24.01-py3
 
-We evaluate our models between 'epochs' using a non-chunked version of Wikitext. At the end of training we make use of the full validation split of The Pile Uncopyrighted to gauge model performance, we specifically use this new publicly available version of The Pile as the original version is now defunct and only available through non official sources. 
+RUN apt install ninja-build
+RUN pip install --upgrade pip
+RUN pip install -r requirements.txt
+```
 
-## Usage
-### Environment
-We recommend using the official PyTorch docker container and installing all of `requirments.txt`. In the future we'll provide a dockerfile which does all the setup for you.
+If you do not wish to use docker you may use `venv`, `conda` or any other environment to run all scripts.
 
 ### Envars
 The following environment variables **must** be set:
@@ -40,8 +24,10 @@ The following environment variables **must** be set:
 - `WANDB_PROJECT_NAME` - The WandB project destination for all runs.
 - `HF_API_KEY` - Your Hugging Face API key to access protected datasets.
 - `HF_CACHE_DIR` - The directory to store loaded models and datasets.
-- `PILE_PATH_PATTERN` - A python string format pattern pointing to the pile shards. Example: `.../the_pile/{:02d}.jsonl`
-- `PILE_SHARDS` - The number of shards available for use.
+
+The following environment variables **must** be set, but can be set to any arbitrary value if you do not wish to pretrain from scratch:
+- `PILE_PATH_PATTERN` - A python string format pattern pointing to the pile shards. Example: `.../the_pile/{:02d}.jsonl` or `placeholder`
+- `PILE_SHARDS` - The number of shards available for use. Example: `24` or `0`
 
 The following environment variables are **optional** but recommended:
 - `TOKENIZERS_PARALLELISM=true` - Forces HF tokenizers to support parallelism.
@@ -52,19 +38,79 @@ The following envars should be used for debugging `torch.compile` related issues
 - `TORCHDYNAMO_VERBOSE=1` to force verbose dynamo logging
 - `TORCH_LOGS=recompiles` to enable dynamo logging on recompiles
 
-## To Do List
-- TODO: add missing docstrings for packages, classes and functions
-- TODO: improved commenting within functions
-- TODO: add citations to readme
-- TODO: deploy models to 🤗 and use shield.io for pretty links
-- TODO: move private functions out of classes when relevant or make public
-- TODO: add flag to disable wandb stats tracking
+### Directory Structure
+We recommend you use the following directory structure and for the built in functions to work all scripts must be run from the root directory.
 
-## Model Sizes
-| Name | $d_{model}$ | $d_{ffn}$ | $n_{layers}$ | $n_{heads}$ | $d_{key}$ | Parameters |
-| ----------- | ----------- | ----------- | ----------- | ----------- | ----------- | ----------- |
-| **Tiny** 	| 768	| 2048 | 12 | 12 | 64 | 125M |
-| **Medium**| 1536 | 4096 | 28 | 24 | 64 | 551M |
+```
+.../direct-preference-heads/              <-- root directory
+.../direct-preference-heads/cfg/          <-- config file directory
+.../direct-preference-heads/src/          <-- source code directory
+.../direct-preference-heads/checkpoints/  <-- where models are saved and loaded from
+```
 
-## Citation
-If you wish to cite this work before then, you may refer to this repository and link to [my Semantic Scholar profile](https://www.semanticscholar.org/author/Avelina-Asada-Hadji-Kyriacou/2139984073).
+## Training
+
+> NOTE: we recommend disabling WandB as otherwise it may attempt to link artifacts from runs that don't exist.
+
+>📋  Describe how to train the models, with example commands on how to train the models in your paper, including the full training procedure and appropriate hyperparameters.
+
+## Evaluation
+
+Using docker (or your preferred environemt) with the required envars set run the following command to obtain all evaluation results:    
+`src/evaluation.py --dir=checkpoints/<model> --benchmark=all`
+
+The results for GLUE will be saved in `checkpoints/<model>/benchmarks/glue_log/` and `checkpoints/<model>/benchmarks/glue_dph/`   
+The results for GPT4All will be saved as `checkpoints/<model>/benchmarks/gpt4all.tsv`    
+The results for RACE will be saved as `checkpoints/<model>/benchmarks/race.tsv`    
+
+Note that you must manually zip and submit the GLUE results to the test server to obtain the benchmark scores.
+
+## Pre-trained Models
+
+All pretrained models can be downloaded from Hugging Face [here](https://huggingface.co/collections/Avelina/direct-preference-heads-preprint-6612d8a6fa3843352943fd43) and must be saved in the `/checkpoints/` directory to load correctly.
+
+Note that when using `LSWTForDPH.generate(...)` the generation will stop when an `<|im_end|>` is predicted, however this token is NOT automatically added to the input context: there must be a manually added `<|im_end|>` token included at the end of the final assistant message for the `LSWTForDPH.compute_rewards(...)` method to calculate the reward correctly. If this token is not included the method will end up computing the reward for the final *user* message rather than the final *assistant* message which is undefined behaviour. 
+
+
+>📋  Give a link to where/how the pretrained models can be downloaded and how they were trained (if applicable).  Alternatively you can have an additional column in your results table with a link to the models.
+
+## Results
+
+### GLUE
+| System | MNLI<br>m/mm | QQP<br>F1/Acc | QNLI<br>Acc | SST-2<br>Acc | CoLA<br>M Corr | STS-B<br>P/S Corr | MRPC<br>F1/Acc | RTE<br>Acc | Score<br>(-WNLI) | WNLI<br>Acc | Score<br>(+WNLI) |
+| --- | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
+| Ours (Vocab) | 34.1/34.7 | 28.2/42.9 | 50.2 | 58.0 |  0.9 | -0.9/99.2 | 69.4/57.4 | 50.9 | 42.8 | 34.9 | 41.9 |
+| Ours (SFT)   | 73.6/75.0 | 59.1/82.8 | 81.4 | 90.8 | 22.7 | 80.6/92.4 | 80.6/75.2 | 71.4 | 72.0 | 38.4 | 68.2 |
+| Ours (DPO)   | 78.8/80.2 | 65.6/85.6 | 87.0 | 93.3 | 36.5 | 83.7/94.4 | 83.9/79.1 | 73.9 | 77.0 | 37.7 | 72.7 |
+| Ours (DPH)   | 80.0/80.6 | 65.8/85.3 | 87.5 | 94.0 | 43.8 | **85.3/93.0** | 85.5/80.2 | **75.3** | 78.6 | 46.6 | 75.0 |
+| GPT-1        | 82.1/81.4 | 70.3/  -  | 87.4 | 91.3 | 45.4 | 82.0/80.0 | 82.3/  -  | 56.0 | -    | -    | 72.8 |
+| BERT Base    | 84.6/83.4 | 71.2/  -  | 90.5 | 93.5 | 52.1 | -  /85.8  | 88.9/  -  | 66.4 | -    | -    | 78.3 |
+| BERT Large   | **86.7/85.9** | **72.1/89.3** | **92.7** | **94.9** | **60.5** | 87.6/86.5 | **89.3/85.4** | 70.1 | **82.5** | **65.1** | **80.5** |
+
+### GPT4All
+| System | HellaSwag | OpenBookQA | WinoGrande | ARC-Challenge | ARC-Easy | BoolQ | PIQA | Average |
+| --- | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
+| Ours (Vocab)   | 36.93 | 28.60 | 51.14 | 26.19 | 25.67 | 61.25 | 65.39 | 42.17 |
+| Ours (SFT)     | 42.59 | 45.20 | 55.01 | 35.84 | 47.01 | 76.24 | 69.37 | 53.04 |
+| Ours (DPO)     | 44.83 | 52.40 | 57.38 | 39.76 | 53.54 | **79.08** | 72.36 | 57.05 |
+| Ours (DPH)     | **59.36** | **57.40** | **59.12** | **41.21** | **56.82** | 78.81 | 68.77 | **60.21** |
+| Pythia-1.0B    | 47.16 | 31.40 | 53.43 | 27.05 | 48.99 | 60.83 | 69.21 | 48.30 |
+| Pythia-1.4B    | 52.01 | 33.20 | 57.38 | 28.50 | 54.00 | 63.27 | 70.95 | 51.33 |
+| TinyLlama (3T) | 59.20 | 36.00 | **59.12** | 30.12 | 55.25 | 57.83 | **73.29** | 52.99 |
+
+### RACE
+
+| System | RACE-middle | RACE-high | Average |
+| --- | :-: | :-: | :-: |
+| Ours (Vocab)   | 26.0 | 24.6 | 25.0 |
+| Ours (SFT)     | 56.1 | 52.9 | 53.8 |
+| Ours (DPO)     | 65.9 | 59.8 | 61.6 |
+| Ours (DPH)     | **66.9** | **60.6** | **62.5** |
+| GPT-1          | 62.9 | 57.4 | 59.0 |
+| LLaMA 7B       | 61.1 | 46.9 | 51.0 |
+| LLaMA 13B      | 61.6 | 47.2 | 51.4 |
+
+
+## Contributing
+
+If you would like to contribute we refer you to our primary repository here: https://github.com/Avelina9X/memory-transformer-pt4
