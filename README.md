@@ -1,6 +1,6 @@
 # Would I Lie To You? Inference Time Alignment of Language Models using Direct Preference Heads
 
-This repository is the official implementation of "Would I Lie To You? Inference Time Alignment of Language Models using Direct Preference Heads"
+This repository is the official implementation of [Would I Lie To You? Inference Time Alignment of Language Models using Direct Preference Heads](https://arxiv.org/abs/2405.20053)
 
 ## Requirements
 
@@ -111,3 +111,15 @@ Note that when using `LSWTForDPH.generate(...)` the generation will stop when an
 ## Contributing
 
 If you would like to contribute we refer you to our primary repository here: https://github.com/Avelina9X/memory-transformer-pt4
+
+## Citation
+```
+@misc{hadjikyriacou2024i,
+      title={Would I Lie To You? Inference Time Alignment of Language Models using Direct Preference Heads}, 
+      author={Avelina Asada Hadji-Kyriacou and Ognjen Arandjelovic},
+      year={2024},
+      eprint={2405.20053},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL}
+}
+```
